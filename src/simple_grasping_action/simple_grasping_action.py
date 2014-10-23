@@ -31,6 +31,7 @@ class SimpleGraspingAction:
     only to trajectories with more than one waypoint.
     """
     target_ctrl_param = '~target_controller'
+    update_rate = 30 # Hz
 
     def __init__(self, name):
         self._action_name = name
@@ -53,7 +54,7 @@ class SimpleGraspingAction:
         rospy.Subscriber("joint_states", JointState, self._joint_state_cb)
         self._joint_state = JointState()
 
-    def _execute_cb(self, goal):
+    def _execute_cb(self, goal, eff_reached=None):
         from actionlib import SimpleGoalState
         from actionlib_msgs.msg import GoalStatus
 
@@ -76,7 +77,7 @@ class SimpleGraspingAction:
         self._ac.send_goal(goal)
 
         # wait for goal to be accepted
-        rate = rospy.Rate(30)
+        rate = rospy.Rate(self.update_rate)
         while self._ac.simple_state == SimpleGoalState.PENDING and \
               not rospy.is_shutdown():
             rate.sleep()
@@ -86,7 +87,8 @@ class SimpleGraspingAction:
 
         # monitor goal progress
         preempted = False
-        eff_reached = {}
+        if not eff_reached:
+            eff_reached = {}
         pos_reached = {}
         try:
             while True:
@@ -158,8 +160,7 @@ class SimpleGraspingAction:
             rospy.logdebug(log_str)
 
         except NewGoal as e:
-            print('New goal!') # TODO: Remove!
-            self.execute_cb(e.goal)
+            self._execute_cb(e.goal, eff_reached) # TODO: Can we refactor so eff_reached is not a callback parameter?
 
     def _joint_state_cb(self, msg):
         self._joint_state = msg
@@ -209,26 +210,32 @@ class SimpleGraspingAction:
         eff_reached_now = self._check_eff_goal_constraint(eff_goal)
         eff_reached_new = []
         for name, val in eff_reached_now.iteritems():
+            # update list of joints that reached the effort goal in this cycle
             if val and (not eff_reached.has_key(name) or not eff_reached[name]):
                 eff_reached_new.append(name)
-                eff_reached[name] = val # True
+            # update global effort goal status
+            if val or not eff_reached.has_key(name):
+                eff_reached[name] = val
         return eff_reached, eff_reached_new
 
     def _recompute_goal(self, goal, end_time, hold_joints):
-        import copy
-        new_goal = copy.deepcopy(goal) # TODO: Needed?
+        goal = goal
         for name in hold_joints:
-            goal_idx = new_goal.trajectory.joint_names.index(name)
+            goal_idx = goal.trajectory.joint_names.index(name)
             js_idx = self._joint_state.name.index(name)
-            new_goal.trajectory.points[0].positions[idx] = self._joint_state[js_idx] # hold position for this joint
+            # NOTE: var-length arrays are deserialized as (immutable) tuples
+            # need to converto to and from list to write a value :(
+            pos_list = list(goal.trajectory.points[0].positions)
+            pos_list[goal_idx] = self._joint_state.position[js_idx]
+            goal.trajectory.points[0].positions = tuple(pos_list)
         new_tfs = end_time - rospy.Time.now()
         if new_tfs < rospy.Duration(0):
             # within the goal time tolerance region
             dt = rospy.Duration(0.01)
-            new_goal.goal_time_tolerance -= (new_tfs + dt) # shrink goal time tolerance
-            new_tfs = rospy.Time.now() + dt # small value in the future to ensure execution
-        new_goal.trajectory.points[0].time_from_start = new_tfs
-        return new_goal
+            goal.goal_time_tolerance -= (new_tfs + dt) # shrink goal time tolerance
+            new_tfs = dt # small value in the future to ensure execution
+        goal.trajectory.points[0].time_from_start = new_tfs
+        return goal
 
     def _check_pos_goal_constraint(self, pos_goal, goal_tol):
         # NOTE: We don't use the controller's state topic, which publishes
