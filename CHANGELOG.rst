@@ -2,6 +2,9 @@
 Changelog for package simple_grasping_action
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.1.0 (2014-10-29)
 ------------------
 * Correct stop-on-contact behavior
