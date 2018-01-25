@@ -2,6 +2,9 @@
 Changelog for package simple_grasping_action
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.1.1 (2017-01-16)
 ------------------
 
