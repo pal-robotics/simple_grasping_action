@@ -15,7 +15,7 @@
 
   <maintainer email="adolfo.rodriguez@pal-robotics.com">Adolfo Rodriguez Tsouroukdissian</maintainer>
   <author email="adolfo.rodriguez@pal-robotics.com">Adolfo Rodriguez Tsouroukdissian</author>
-  <license>TODO</license>
+  <license>LGPL-3.0</license>
   <url type="website">http://wiki.ros.org/simple_grasping_action</url>
 
   <buildtool_depend>catkin</buildtool_depend>
