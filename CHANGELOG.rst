@@ -2,8 +2,8 @@
 Changelog for package simple_grasping_action
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.0.1 (2019-01-18)
+------------------
 * Change license to LGPL-3.0
 * Contributors: Victor Lopez
 
